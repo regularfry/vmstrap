@@ -1,0 +1,85 @@
+#!/bin/bash
+
+# vmstrap
+#
+# A small tool to build a mountable, bootable Debian image from scratch.
+#
+# Usage:
+#   vmstrap <DISC_IMG> [<DEB_MIRROR>]
+#
+# where:
+#
+#   DISC_IMG is the name of an existing file into which the image will 
+#     be created.
+#   DEB_MIRROR is the optional mirror URL for debootstrap.
+#
+#  If the $ROOT_PASSWORD environment variable is set, `vmstrap` will set it as
+#  the root password for the system.  Otherwise a password of "foobar" will be
+#  set.
+#
+# If cachestrap is present on the system, vmstrap will use it instead of
+# debootstrap.
+#
+# The disc image will be mkfs.ext4'd, but not zeroed.  Check there's no data
+# you don't want surviving *before* running `vmstrap`.
+#
+# Requires root privileges.  There's probably a way to do this with FUSE and fakeroot.
+# Exercise for the reader.
+
+set -e
+
+DISC_IMG=${1:-"wheezy.img"}
+MOUNTPOINT="${DISC_IMG}.mount"
+DEB_MIRROR=${2:-""}
+ROOT_PASSWD=${ROOT_PASSWD:-"foobar"}
+
+DEBOOTSTRAP=debootstrap
+if command -v cachestrap > /dev/null; then
+  DEBOOTSTRAP=cachestrap
+fi
+
+mkdir ${MOUNTPOINT}
+/sbin/mkfs.ext4 -F ${DISC_IMG}
+mount -o loop ${DISC_IMG} ${MOUNTPOINT}
+${DEBOOTSTRAP} wheezy ${MOUNTPOINT} ${DEB_MIRROR}
+
+in-chroot ${MOUNTPOINT} apt-get update
+in-chroot ${MOUNTPOINT} apt-get install -yy --force-yes \
+  linux-image-amd64 \
+  extlinux
+
+in-chroot ${MOUNTPOINT} extlinux --install /boot
+
+KERNEL=$(cd ${MOUNTPOINT}/boot && ls vmlinuz* | tail -n1)
+INITRD=$(cd ${MOUNTPOINT}/boot && ls initrd* | tail -n1)
+cat > ${MOUNTPOINT}/boot/extlinux.conf <<EXTLINUXCONF
+default linux
+prompt 0
+timeout 0
+
+label linux
+kernel /boot/${KERNEL}
+append initrd=/boot/${INITRD} root=/dev/sda clocksource=kvm-clock serial=tty0 console=ttyS0,115200n8
+EXTLINUXCONF
+
+cat > ${MOUNTPOINT}/etc/modules << ETCMODULES
+virtio_blk
+virtio-rng
+virtio_console
+virtio_balloon
+virtio_ring
+virtio_pci
+virtio
+virtio_net
+ETCMODULES
+
+cat >> ${MOUNTPOINT}/etc/inittab <<ETCINITTAB
+T0:23:respawn:/sbin/getty -L ttyS0 115200 vt102
+ETCINITTAB
+
+dd if=${MOUNTPOINT}/usr/lib/extlinux/mbr.bin of=${DISC_IMG} conv=notrunc
+
+echo "root:${ROOT_PASSWD}" | in-chroot ${MOUNTPOINT} chpasswd
+
+umount ${MOUNTPOINT}
+rm ${MOUNTPOINT}
