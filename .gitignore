@@ -1,0 +1,4 @@
+debian/files
+debian/vmstrap.debhelper.log
+debian/vmstrap.substvars
+debian/vmstrap/
