@@ -1,15 +1,14 @@
 Source: vmstrap
-Section: unknown
+Section: devel
 Priority: extra
 Maintainer: Alex Young <alex@blackkettle.org>
 Build-Depends: debhelper (>= 8.0.0)
 Standards-Version: 3.9.3
-Homepage: <insert the upstream URL, if relevant>
-#Vcs-Git: git://git.debian.org/collab-maint/vmstrap.git
-#Vcs-Browser: http://git.debian.org/?p=collab-maint/vmstrap.git;a=summary
+Homepage: https://github.com/regularfry/vmstrap.git
 
 Package: vmstrap
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}
-Description: <insert up to 60 chars description>
- <insert long description, indented with spaces>
+Depends: ${shlibs:Depends}, ${misc:Depends}, in-chroot
+Description: Build a bootable vm image
+ Builds a bootable VM image from debootstrap and extlinux.  The image is also
+ mountable.
