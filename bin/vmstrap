@@ -28,7 +28,18 @@
 
 set -e
 
-DISC_IMG=${1:-"wheezy.img"}
+DISC_IMG=${1:-""}
+
+if [ -z "${DISC_IMG}" ] || [ ! -f "${DISC_IMG}" ]; then
+  echo "Must give the name of a disc image file!" >&2
+  exit 1
+fi
+
+if ! command -v in-chroot > /dev/null; then
+  echo "in-chroot command not found.  Installing into the filesystem cannot work." >&2
+  exit 1
+fi
+
 MOUNTPOINT="${DISC_IMG}.mount"
 DEB_MIRROR=${2:-""}
 ROOT_PASSWD=${ROOT_PASSWD:-"foobar"}
@@ -82,4 +93,4 @@ dd if=${MOUNTPOINT}/usr/lib/extlinux/mbr.bin of=${DISC_IMG} conv=notrunc
 echo "root:${ROOT_PASSWD}" | in-chroot ${MOUNTPOINT} chpasswd
 
 umount ${MOUNTPOINT}
-rm ${MOUNTPOINT}
+rmdir ${MOUNTPOINT}
