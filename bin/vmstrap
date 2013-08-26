@@ -88,6 +88,14 @@ cat >> ${MOUNTPOINT}/etc/inittab <<ETCINITTAB
 T0:23:respawn:/sbin/getty -L ttyS0 115200 vt102
 ETCINITTAB
 
+cat >> ${MOUNTPOINT}/etc/network/interfaces <<ETCNETWORKINTERFACES
+
+auto eth0
+iface eth0 inet dhcp
+
+ETCNETWORKINTERFACES
+
+
 dd if=${MOUNTPOINT}/usr/lib/extlinux/mbr.bin of=${DISC_IMG} conv=notrunc
 
 echo "root:${ROOT_PASSWD}" | in-chroot ${MOUNTPOINT} chpasswd
